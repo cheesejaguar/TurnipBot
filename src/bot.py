@@ -2,7 +2,7 @@ from datetime import datetime, time
 import discord
 from discord.ext import commands
 from src.settings import TOKEN
-from src.firebase import Mayor, is_registered
+from src.firebase import Mayor, is_registered, highest_price
 
 bot = commands.Bot(command_prefix='!')
 slot_lookup = {"Mon AM": 0,
@@ -70,11 +70,19 @@ def get_prices(target):
         return "User is not registered, please register with !register"
 
 
-def set_price(ctx, price):
+def set_price(ctx, price, desired_slot=None):
     author = str(ctx.message.author)
     if is_registered(author):
         mayor = Mayor(author)
         mayor.pull()
+        if desired_slot:
+            try:
+                time_slot_idx = slot_lookup[desired_slot]
+                mayor.prices[time_slot_idx] = int(price)
+                mayor.push()
+                return "{} set price for {} to {} bells.".format(ctx.message.author.mention, desired_slot, price)
+            except KeyError:
+                return "Invalid time slot specified, please use three letter day with AM or PM, i.e. Mon AM"
         time_slot = get_current_slot()
         if time_slot:
             time_slot_idx = slot_lookup[time_slot]
@@ -84,6 +92,12 @@ def set_price(ctx, price):
         return "Could not set price, Nook's Cranny is currently closed."
     else:
         return "User is not registered, please register with !register"
+
+
+def best_price(ctx):
+    person, price = highest_price(slot_lookup[get_current_slot()])
+    discord_user = ctx.message.guild.get_member_named(person)
+    return "Current best price is {} with a price of {} bells per turnip.".format(discord_user.mention, price)
 
 
 @bot.command(name='turnip')
@@ -100,9 +114,9 @@ async def register_user(ctx):
 
 
 @bot.command(name="set_price")
-async def set_turnip_price(ctx, *, price: int):
+async def set_turnip_price(ctx, price: int, desired_slot=None):
     """ Set price for current time slot """
-    response = set_price(ctx, str(price))
+    response = set_price(ctx, str(price), desired_slot)
     await ctx.send(response)
 
 
@@ -117,6 +131,13 @@ async def get_my_price(ctx):
 async def get_target_price(ctx, target: discord.User):
     """ Return list of target user prices """
     response = get_prices(str(target))
+    await ctx.send(response)
+
+
+@bot.command(name="best")
+async def get_best_price(ctx):
+    """ Return current highest price for turnips """
+    response = best_price(ctx)
     await ctx.send(response)
 
 

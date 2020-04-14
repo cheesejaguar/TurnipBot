@@ -1,5 +1,6 @@
 from firebase_admin import credentials, firestore, initialize_app
 from json import dumps, loads
+import operator
 
 from src.settings import KEY_CONTENTS
 cred = credentials.Certificate(KEY_CONTENTS)
@@ -49,3 +50,12 @@ def is_registered(username):
         if (each.to_dict()["id"] == username):
             return True
     return False
+
+
+def highest_price(current_slot):
+    query = turnip_ref.db.order_by("id")
+    temp_dict = {}
+    for each in query.stream():
+        user_entry = each.to_dict()
+        temp_dict[user_entry["id"]] = user_entry["prices"][current_slot]
+    return max(temp_dict.items(), key=operator.itemgetter(1))

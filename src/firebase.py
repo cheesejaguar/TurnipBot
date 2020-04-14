@@ -34,6 +34,10 @@ class Mayor(object):
         for key in user_json:
             setattr(self, key, user_json[key])
 
+    def create(self):
+        user_json = loads(self.__repr__())
+        turnip_ref.db.document(self.id).create(user_json)
+
 
 def dumper(obj):
     return obj.__dict__
@@ -42,6 +46,6 @@ def dumper(obj):
 def is_registered(username):
     query = turnip_ref.db.order_by("id")
     for each in query.stream():
-        if not (each.to_dict()["id"] == username):
-            return False
-    return True
+        if (each.to_dict()["id"] == username):
+            return True
+    return False

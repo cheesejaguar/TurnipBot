@@ -4,22 +4,21 @@ from src.settings import TOKEN
 from src.firebase import Mayor, is_registered
 
 bot = commands.Bot(command_prefix='!')
-slot_lookup = {"Monday AM": 0,
-               "Monday PM": 1,
-               "Tuesday AM": 2,
-               "Tuesday PM": 3,
-               "Wednesday AM": 4,
-               "Wednesday PM": 5,
-               "Thursday AM": 6,
-               "Thursday PM": 7,
-               "Friday AM": 8,
-               "Friday PM": 9}
-week = {0: "Monday ",
-        1: "Tuesday ",
-        2: "Wednesday ",
-        3: "Thursday ",
-        4: "Friday ",
-        7: "Sunday"}
+slot_lookup = {"Mon AM": 0,
+               "Mon PM": 1,
+               "Tue AM": 2,
+               "Tue PM": 3,
+               "Wed AM": 4,
+               "Wed PM": 5,
+               "Thu AM": 6,
+               "Thu PM": 7,
+               "Fri AM": 8,
+               "Fri PM": 9}
+week = {0: "Mon ",
+        1: "Tue ",
+        2: "Wed ",
+        3: "Thu ",
+        4: "Fri "}
 
 
 def get_current_slot():
@@ -44,8 +43,11 @@ def get_current_slot():
 def create_mayor(ctx):
     author = str(ctx.message.author)
     if not is_registered(author):
-        mayor = Mayor(author)
-        mayor.push()
+        try:
+            mayor = Mayor(author)
+            mayor.create()
+        except:
+            return "Registration error, please complain loudly."
         return("User {} is now registered.".format(ctx.message.author.mention))
     else:
         return("User {} is already registered.".format(ctx.message.author.mention))
@@ -56,10 +58,14 @@ def get_prices(ctx):
     if is_registered(author):
         mayor = Mayor(author)
         mayor.pull()
-        response_constructor = ["Prices: \n"]
-        for day, price in zip(list(slot_lookup.keys()), mayor.prices):
-            response_constructor.append("{}: {} bells \n".format(day, price))
-        return "".join(response_constructor[:])
+        response_constructor = ["```Prices: \n"]
+        response_constructor.append("Sunday purchase price: {} bells \n".format(mayor.purchase_price))
+        for idx, (day, price) in enumerate(zip(list(slot_lookup.keys()), mayor.prices)):
+            if idx % 2:
+                response_constructor.append("{}: {} bells \n".format(day, price))
+            else:
+                response_constructor.append("{}: {} bells \t".format(day, price))
+        return "".join(response_constructor[:]) + "```"
     else:
         return "User is not registered, please register with !register"
 

@@ -1,4 +1,5 @@
 from datetime import datetime, time
+import discord
 from discord.ext import commands
 from src.settings import TOKEN
 from src.firebase import Mayor, is_registered
@@ -53,10 +54,9 @@ def create_mayor(ctx):
         return("User {} is already registered.".format(ctx.message.author.mention))
 
 
-def get_prices(ctx):
-    author = str(ctx.message.author)
-    if is_registered(author):
-        mayor = Mayor(author)
+def get_prices(target):
+    if is_registered(target):
+        mayor = Mayor(target)
         mayor.pull()
         response_constructor = ["```Prices: \n"]
         response_constructor.append("Sunday purchase price: {} bells \n".format(mayor.purchase_price))
@@ -107,9 +107,16 @@ async def set_turnip_price(ctx, *, price: int):
 
 
 @bot.command(name="my_prices")
-async def my_prices(ctx):
+async def get_my_price(ctx):
     """ Return list of your current prices """
-    response = get_prices(ctx)
+    response = get_prices(str(ctx.message.author))
+    await ctx.send(response)
+
+
+@bot.command(name="get_prices")
+async def get_target_price(ctx, target: discord.User):
+    """ Return list of target user prices """
+    response = get_prices(str(target))
     await ctx.send(response)
 
 

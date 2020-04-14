@@ -60,6 +60,8 @@ def get_prices(ctx):
         for day, price in zip(list(slot_lookup.keys()), mayor.prices):
             response_constructor.append("{}: {} bells \n".format(day, price))
         return "".join(response_constructor[:])
+    else:
+        return "User is not registered, please register with !register"
 
 
 def set_price(ctx, price):
@@ -74,6 +76,8 @@ def set_price(ctx, price):
             mayor.push()
             return "{} set price for {} to {} bells.".format(ctx.message.author.mention, time_slot, price)
         return "Could not set price, Nook's Cranny is currently closed."
+    else:
+        return "User is not registered, please register with !register"
 
 
 @bot.command(name='turnip')

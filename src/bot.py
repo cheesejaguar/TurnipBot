@@ -77,8 +77,8 @@ def set_price(ctx, price):
 
 
 @bot.command(name='turnip')
-async def turnip(ctx, *, arg):
-    response = "Stalks!".format(arg)
+async def turnip(ctx):
+    response = "Stalks!"
     await ctx.send(response)
 
 

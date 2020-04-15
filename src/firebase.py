@@ -13,12 +13,13 @@ class DataBase(object):
         self.db = db.collection(database)
 
 
-turnip_ref = DataBase("turnips")
+island_ref = DataBase("islands")
 
 
-class Mayor(object):
-    def __init__(self, username):
-        self.id = username
+class Island(object):
+    def __init__(self, island_name):
+        self.id = island_name
+        self.residents = []
         self.prices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.purchased = 0
         self.purchase_price = 0
@@ -28,16 +29,16 @@ class Mayor(object):
 
     def push(self):
         user_json = loads(self.__repr__())
-        turnip_ref.db.document(self.id).update(user_json)
+        island_ref.db.document(self.id).update(user_json)
 
     def pull(self):
-        user_json = turnip_ref.db.document(self.id).get().to_dict()
+        user_json = island_ref.db.document(self.id).get().to_dict()
         for key in user_json:
             setattr(self, key, user_json[key])
 
     def create(self):
         user_json = loads(self.__repr__())
-        turnip_ref.db.document(self.id).create(user_json)
+        island_ref.db.document(self.id).create(user_json)
 
 
 def dumper(obj):
@@ -45,17 +46,34 @@ def dumper(obj):
 
 
 def is_registered(username):
-    query = turnip_ref.db.order_by("id")
+    home_island = find_home_island(username)
+    return home_island if home_island else False
+
+
+def island_exists(island_name):
+    query = island_ref.db.order_by("id")
     for each in query.stream():
-        if (each.to_dict()["id"] == username):
+        island = each.to_dict()
+        if island_name == island["id"]:
             return True
     return False
 
 
+def find_home_island(username):
+    query = island_ref.db.order_by("id")
+    for each in query.stream():
+        # print(each.to_dict()["id"])
+        for resident in each.to_dict()["residents"]:
+            # print("{} vs {}".format(resident, username))
+            if str(resident) == str(username):
+                return each.to_dict()["id"]
+    return None
+
+
 def highest_price(current_slot):
-    query = turnip_ref.db.order_by("id")
+    query = island_ref.db.order_by("id")
     temp_dict = {}
     for each in query.stream():
         user_entry = each.to_dict()
-        temp_dict[user_entry["id"]] = user_entry["prices"][current_slot]
+        temp_dict[user_entry["residents"][0]] = user_entry["prices"][current_slot]
     return max(temp_dict.items(), key=operator.itemgetter(1))

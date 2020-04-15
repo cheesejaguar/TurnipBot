@@ -2,7 +2,7 @@ from datetime import datetime, time
 import discord
 from discord.ext import commands
 from src.settings import TOKEN
-from src.firebase import Mayor, is_registered, highest_price
+from src.firebase import Island, find_home_island, is_registered, island_exists, highest_price
 
 bot = commands.Bot(command_prefix='!')
 slot_lookup = {"Mon AM": 0,
@@ -41,12 +41,15 @@ def get_current_slot():
             return False
 
 
-def create_mayor(ctx):
+def register_resident(ctx, island_name):
     author = str(ctx.message.author)
     if not is_registered(author):
         try:
-            mayor = Mayor(author)
-            mayor.create()
+            island = Island(island_name)
+            if not island_exists(island_name):
+                island.create()
+            island.residents.append(author)
+            island.push()
         except:
             return "Registration error, please complain loudly."
         return("User {} is now registered.".format(ctx.message.author.mention))
@@ -55,12 +58,13 @@ def create_mayor(ctx):
 
 
 def get_prices(target):
-    if is_registered(target):
-        mayor = Mayor(target)
-        mayor.pull()
+    island_name = is_registered(str(target))
+    if island_name:
+        island = Island(island_name)
+        island.pull()
         response_constructor = ["```Prices: \n"]
-        response_constructor.append("Sunday purchase price: {} bells \n".format(mayor.purchase_price))
-        for idx, (day, price) in enumerate(zip(list(slot_lookup.keys()), mayor.prices)):
+        response_constructor.append("Sunday purchase price: {} bells \n".format(island.purchase_price))
+        for idx, (day, price) in enumerate(zip(list(slot_lookup.keys()), island.prices)):
             if idx % 2:
                 response_constructor.append("{}: {} bells \n".format(day, price))
             else:
@@ -72,22 +76,23 @@ def get_prices(target):
 
 def set_price(ctx, price, desired_slot=None):
     author = str(ctx.message.author)
-    if is_registered(author):
-        mayor = Mayor(author)
-        mayor.pull()
+    author_island = is_registered(author)
+    if author_island:
+        island = Island(author_island)
+        island.pull()
         if desired_slot:
             try:
                 time_slot_idx = slot_lookup[desired_slot]
-                mayor.prices[time_slot_idx] = int(price)
-                mayor.push()
+                island.prices[time_slot_idx] = int(price)
+                island.push()
                 return "{} set price for {} to {} bells.".format(ctx.message.author.mention, desired_slot, price)
             except KeyError:
                 return "Invalid time slot specified, please use three letter day with AM or PM, i.e. Mon AM"
         time_slot = get_current_slot()
         if time_slot:
             time_slot_idx = slot_lookup[time_slot]
-            mayor.prices[time_slot_idx] = int(price)
-            mayor.push()
+            island.prices[time_slot_idx] = int(price)
+            island.push()
             return "{} set price for {} to {} bells.".format(ctx.message.author.mention, time_slot, price)
         return "Could not set price, Nook's Cranny is currently closed."
     else:
@@ -107,9 +112,9 @@ async def turnip(ctx):
 
 
 @bot.command(name="register")
-async def register_user(ctx):
-    """ Register your username for tracking turnip prices """
-    response = create_mayor(ctx)
+async def register_user(ctx, island: str):
+    """ Register your username for tracking turnip prices, !register "island name" """
+    response = register_resident(ctx, island)
     await ctx.send(response)
 
 
@@ -138,6 +143,17 @@ async def get_target_price(ctx, target: discord.User):
 async def get_best_price(ctx):
     """ Return current highest price for turnips """
     response = best_price(ctx)
+    await ctx.send(response)
+
+
+@bot.command(name="my_island")
+async def what_is_my_island(ctx):
+    """ Find what island you are registered to. """
+    my_island = find_home_island(ctx.message.author)
+    if my_island:
+        response = "Your home island is {}".format(my_island)
+    else:
+        response = "You are not registered to an island!"
     await ctx.send(response)
 
 

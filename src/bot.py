@@ -117,7 +117,7 @@ def return_prediction_url(ctx):
     price_array = [str(each) for each in combined_prices]
     print(price_array)
     query_string = ".".join(price_array).replace(".0.", "..").replace("nan", "")
-    return (base_url + query_string).replace("=0.", "=..")
+    return (base_url + query_string).replace("=0.", "=.")
 
 
 @bot.command(name='turnip')

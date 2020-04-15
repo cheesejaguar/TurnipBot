@@ -2,7 +2,7 @@ from datetime import datetime, time
 import discord
 from discord.ext import commands
 from src.settings import TOKEN
-from src.firebase import Island, find_home_island, is_registered, island_exists, highest_price
+from src.firebase import Island, fetch_islands, fetch_residents, find_home_island, is_registered, island_exists, highest_price
 
 bot = commands.Bot(command_prefix='!')
 slot_lookup = {"Mon AM": 0,
@@ -105,6 +105,21 @@ def best_price(ctx):
     return "Current best price is {} with a price of {} bells per turnip.".format(discord_user.mention, price)
 
 
+def return_prediction_url(ctx):
+    author = str(ctx.message.author)
+    author_island = is_registered(author)
+    if author_island:
+        island = Island(author_island)
+        island.pull()
+    base_url = "https://turnipprophet.io/?prices="
+    combined_prices = [island.purchase_price] + island.prices
+    print(combined_prices)
+    price_array = [str(each) for each in combined_prices]
+    print(price_array)
+    query_string = ".".join(price_array).replace(".0.", "..").replace("nan", "")
+    return (base_url + query_string).replace("=0.", "=..")
+
+
 @bot.command(name='turnip')
 async def turnip(ctx):
     response = "Stalks!"
@@ -154,6 +169,30 @@ async def what_is_my_island(ctx):
         response = "Your home island is {}".format(my_island)
     else:
         response = "You are not registered to an island!"
+    await ctx.send(response)
+
+
+@bot.command(name="list_islands")
+async def list_islands(ctx):
+    """ Lists all registered islands """
+    island_list = fetch_islands()
+    response = "**Current registered islands:** " + str(island_list)
+    await ctx.send(response)
+
+
+@bot.command(name="get_residents")
+async def get_residents(ctx, island_name: str):
+    """ Lists all residents of given island """
+    residents = [ctx.message.guild.get_member_named(name).mention for name in fetch_residents(island_name)]
+    response = "Residents of {} are {}".format(island_name, str(residents))
+    await ctx.send(response)
+
+
+@bot.command(name="predict")
+async def predict_turnips(ctx):
+    """ Provides a link to turnip price prediction """
+    url = return_prediction_url(ctx)
+    response = "Link to your turnip price forecast: {}".format(url)
     await ctx.send(response)
 
 

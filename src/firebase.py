@@ -45,6 +45,16 @@ def dumper(obj):
     return obj.__dict__
 
 
+def fetch_islands():
+    return [each.to_dict()["id"] for each in island_ref.db.order_by("id").stream()]
+
+
+def fetch_residents(island_name):
+    query = island_ref.db.where("id", "==", island_name)
+    islands = [each.to_dict() for each in query.stream()]
+    return islands[0]["residents"] if islands else None
+
+
 def is_registered(username):
     home_island = find_home_island(username)
     return home_island if home_island else False

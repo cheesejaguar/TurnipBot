@@ -14,20 +14,21 @@ slot_lookup = {"Mon AM": 0,
                "Thu AM": 6,
                "Thu PM": 7,
                "Fri AM": 8,
-               "Fri PM": 9}
+               "Fri PM": 9,
+               "Sat AM": 10,
+               "Sat PM": 11}
 week = {0: "Mon ",
         1: "Tue ",
         2: "Wed ",
         3: "Thu ",
-        4: "Fri "}
+        4: "Fri ",
+        5: "Sat "}
 
 
 def get_current_slot():
     # returns current slot, but False if no slot available
     weekday = datetime.now().weekday()
     if weekday == 6:
-        return False
-    elif weekday == 7:
         return "Sunday"
     else:
         am = [time(8, 00), time(11, 59, 59)]  # AM hours are 8am to 12pm
@@ -62,6 +63,7 @@ def get_prices(target):
     if island_name:
         island = Island(island_name)
         island.pull()
+        print(len(island.prices))
         response_constructor = ["```Prices: \n"]
         response_constructor.append("Sunday purchase price: {} bells \n".format(island.purchase_price))
         for idx, (day, price) in enumerate(zip(list(slot_lookup.keys()), island.prices)):
@@ -82,14 +84,21 @@ def set_price(ctx, price, desired_slot=None):
         island.pull()
         if desired_slot:
             try:
-                time_slot_idx = slot_lookup[desired_slot]
-                island.prices[time_slot_idx] = int(price)
-                island.push()
+                if desired_slot == "Sunday":
+                    island.purchase_price = int(price)
+                    island.push()
+                else:
+                    time_slot_idx = slot_lookup[desired_slot]
+                    island.prices[time_slot_idx] = int(price)
+                    island.push()
                 return "{} set price for {} to {} bells.".format(ctx.message.author.mention, desired_slot, price)
             except KeyError:
                 return "Invalid time slot specified, please use three letter day with AM or PM, i.e. Mon AM"
         time_slot = get_current_slot()
-        if time_slot:
+        if time_slot == "Sunday":
+            island.purchase_price = int(price)
+            island.push()
+        elif time_slot:
             time_slot_idx = slot_lookup[time_slot]
             island.prices[time_slot_idx] = int(price)
             island.push()
@@ -113,9 +122,7 @@ def return_prediction_url(ctx):
         island.pull()
     base_url = "https://turnipprophet.io/?prices="
     combined_prices = [island.purchase_price] + island.prices
-    print(combined_prices)
     price_array = [str(each) for each in combined_prices]
-    print(price_array)
     query_string = ".".join(price_array).replace(".0.", "..").replace("nan", "")
     return (base_url + query_string).replace("=0.", "=.")
 

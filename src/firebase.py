@@ -20,7 +20,7 @@ class Island(object):
     def __init__(self, island_name):
         self.id = island_name
         self.residents = []
-        self.prices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.prices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.purchased = 0
         self.purchase_price = 0
 

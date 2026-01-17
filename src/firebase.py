@@ -50,9 +50,12 @@ def fetch_islands():
 
 
 def fetch_residents(island_name):
-    query = island_ref.db.where("id", "==", island_name)
-    islands = [each.to_dict() for each in query.stream()]
-    return islands[0]["residents"] if islands else None
+    """Fetch residents by direct document lookup (O(1) instead of O(n))."""
+    doc = island_ref.db.document(island_name).get()
+    if doc.exists:
+        data = doc.to_dict()
+        return data.get("residents", [])
+    return None
 
 
 def is_registered(username):
@@ -60,23 +63,31 @@ def is_registered(username):
     return home_island if home_island else False
 
 
-def island_exists(island_name):
-    query = island_ref.db.order_by("id")
-    for each in query.stream():
-        island = each.to_dict()
-        if island_name == island["id"]:
-            return True
+def remove_resident(username, island_name):
+    """Remove a resident from an island. Returns True on success, False otherwise."""
+    island = Island(island_name)
+    island.pull()
+    username_str = str(username)
+    if username_str in island.residents:
+        island.residents.remove(username_str)
+        island.push()
+        return True
     return False
 
 
+def island_exists(island_name):
+    """Check island existence by direct document lookup (O(1) instead of O(n))."""
+    doc = island_ref.db.document(island_name).get()
+    return doc.exists
+
+
 def find_home_island(username):
-    query = island_ref.db.order_by("id")
-    for each in query.stream():
-        # print(each.to_dict()["id"])
-        for resident in each.to_dict()["residents"]:
-            # print("{} vs {}".format(resident, username))
-            if str(resident) == str(username):
-                return each.to_dict()["id"]
+    """Find user's home island using array_contains query (O(1) with index)."""
+    username_str = str(username)
+    query = island_ref.db.where("residents", "array_contains", username_str)
+    results = list(query.stream())
+    if results:
+        return results[0].to_dict().get("id")
     return None
 
 
@@ -85,5 +96,13 @@ def highest_price(current_slot):
     temp_dict = {}
     for each in query.stream():
         user_entry = each.to_dict()
-        temp_dict[user_entry["residents"][0]] = user_entry["prices"][current_slot]
+        residents = user_entry.get("residents", [])
+        prices = user_entry.get("prices", [])
+        if not residents or len(prices) <= current_slot:
+            continue
+        price = prices[current_slot]
+        if price and price > 0:
+            temp_dict[residents[0]] = price
+    if not temp_dict:
+        return None
     return max(temp_dict.items(), key=operator.itemgetter(1))

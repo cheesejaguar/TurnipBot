@@ -1,0 +1,68 @@
+[project]
+name = "turnipbot"
+version = "1.0.0"
+description = "Discord bot for tracking Animal Crossing turnip prices"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+    "discord.py>=1.3.3,<2.0.0",
+    "firebase-admin>=3.0.0",
+    "python-dotenv>=0.12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = "-v --cov=src --cov-report=term-missing --cov-report=html"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "@bot.command",
+    "async def turnip",
+    "async def register_user",
+    "async def unregister_user",
+    "async def set_turnip_price",
+    "async def get_my_price",
+    "async def get_target_price",
+    "async def get_best_price",
+    "async def what_is_my_island",
+    "async def list_islands",
+    "async def get_residents",
+    "async def predict_turnips",
+    "async def reset_week",
+    "async def help_turnip",
+    "if __name__ == .__main__.:",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
